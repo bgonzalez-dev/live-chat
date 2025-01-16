@@ -36,34 +36,51 @@ export function setupXMPP(username, password, onMessage, onPresence, onRoster) {
     const roster = parseRoster(rosterResult);
     if (onRosterCallback) onRosterCallback(roster);
 
-    // Send initial presence
+    // Send initial presence with priority
     await sendPresence();
+
+    // Subscribe to presence for all roster items
+    roster.forEach(item => {
+      xmpp.send(xml('presence', { to: item.jid, type: 'subscribe' }));
+      requestPresence(item.jid);
+    });
   });
 
   xmpp.on('error', (err) => {
     console.error('XMPP error:', err.toString());
   });
 
-  xmpp.on('stanza', (stanza) => {
+  xmpp.on('stanza', async (stanza) => {
     if (stanza.is('message') && stanza.attrs.type === 'chat') {
       const message = {
         from: jid(stanza.attrs.from).bare().toString(),
         body: stanza.getChildText('body'),
         timestamp: new Date().toISOString(),
       };
-      const fileTransfer = stanza.getChild('x', 'jabber:x:oob');
-      if (fileTransfer) {
-        message.fileUrl = fileTransfer.getChildText('url');
-        message.fileName = fileTransfer.getChildText('desc');
-      }
       if (onMessageCallback) onMessageCallback(message);
     } else if (stanza.is('presence')) {
       const from = jid(stanza.attrs.from).bare().toString();
       const type = stanza.attrs.type || 'available';
       const show = stanza.getChildText('show') || 'chat';
-      const status = stanza.getChildText('status') || '';
-      const presence = { from, type, show, status, timestamp: new Date().toISOString() };
-      if (onPresenceCallback) onPresenceCallback(presence);
+      const status = stanza.getChildText('status') || 'Online';
+
+      // Auto-accept subscription requests
+      if (type === 'subscribe') {
+        xmpp.send(xml('presence', { to: from, type: 'subscribed' }));
+        xmpp.send(xml('presence', { to: from, type: 'subscribe' }));
+      }
+
+      // Handle presence updates
+      if (!type || type === 'available' || type === 'unavailable') {
+        const presence = {
+          from,
+          type,
+          show,
+          status,
+          timestamp: new Date().toISOString()
+        };
+        if (onPresenceCallback) onPresenceCallback(presence);
+      }
     }
   });
 
@@ -103,10 +120,19 @@ export function sendPresence(show = 'chat', status = 'Online') {
     const presence = xml(
         'presence',
         {},
+        xml('priority', {}, '10'),
         xml('show', {}, show),
         xml('status', {}, status)
     );
     xmpp.send(presence);
+  } else {
+    console.error('XMPP client not initialized');
+  }
+}
+
+export function requestPresence(jid) {
+  if (xmpp) {
+    xmpp.send(xml('presence', { to: jid, type: 'probe' }));
   } else {
     console.error('XMPP client not initialized');
   }
@@ -125,6 +151,7 @@ export function addContact(jid) {
     );
     xmpp.send(iq);
     xmpp.send(xml('presence', { to: jid, type: 'subscribe' }));
+    requestPresence(jid);
   } else {
     console.error('XMPP client not initialized');
   }
@@ -154,7 +181,7 @@ function parseRoster(iq) {
   for (const item of items) {
     result.push({
       jid: item.attrs.jid,
-      name: item.attrs.name,
+      name: item.attrs.name || item.attrs.jid.split('@')[0],
       subscription: item.attrs.subscription,
     });
   }

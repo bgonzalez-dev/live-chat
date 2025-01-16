@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Smile } from 'lucide-react';
-import { sendMessage } from '../xmppClient';
 import EmojiPicker from 'emoji-picker-react';
 
 function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser }) {
@@ -14,6 +13,31 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
   };
 
   useEffect(scrollToBottom, [messages]);
+
+  const getPresenceStatus = (presenceData) => {
+    if (!presenceData || presenceData.type === 'unavailable') {
+      return 'Offline';
+    }
+
+    switch (presenceData?.show) {
+      case 'chat':
+        return 'Online';
+      case 'away':
+        return 'Away';
+      case 'xa':
+        return 'Extended Away';
+      case 'dnd':
+        return 'Do Not Disturb';
+      default:
+        return presenceData.status || 'Online';
+    }
+  };
+
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -37,9 +61,6 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
   };
 
   const uploadFile = async (base64, fileName) => {
-    // Aquí deberías implementar la lógica para subir el archivo a tu servidor
-    // y devolver la URL del archivo subido
-    // Por ahora, simplemente devolveremos una URL falsa
     return `https://example.com/files/${fileName}`;
   };
 
@@ -48,52 +69,58 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
     setShowEmojiPicker(false);
   };
 
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return 'Unknown';
-    const date = new Date(timestamp);
-    return date.toLocaleString();
-  };
-
   if (!activeChat) {
     return (
-        <div className="flex items-center justify-center h-full bg-gray-100">
-          <p className="text-xl text-gray-500">Select a chat or start a new one to begin messaging</p>
+        <div className="flex items-center justify-center h-full bg-gray-50">
+          <p className="text-xl text-gray-400">Select a chat or start a new one to begin messaging</p>
         </div>
     );
   }
 
   return (
-      <div className="flex flex-col h-full">
-        <div className="bg-white p-4 border-b flex items-center">
-          <h2 className="text-xl font-semibold flex-grow">{activeChat.name || activeChat.jid}</h2>
-          <div className="text-sm text-gray-500">
-            {presence?.type === 'unavailable' ? 'Offline' : 'Online'} •
-            Last seen: {formatTimestamp(presence?.timestamp)}
+      <div className="flex flex-col h-full bg-gray-50">
+        <div className="bg-white p-4 border-b border-gray-200 flex items-center">
+          <h2 className="text-xl font-semibold text-[#082245] flex-grow">{activeChat.name}</h2>
+          <div className="text-sm text-[#5f0099]">
+            {getPresenceStatus(presence)}
           </div>
         </div>
         <div className="flex-grow overflow-y-auto p-4">
           {messages.map((msg, index) => (
               <div key={index} className={`mb-4 ${msg.from === currentUser ? 'text-right' : 'text-left'}`}>
-                <div className={`inline-block p-2 rounded-lg ${msg.from === currentUser ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+                <div className={`inline-block max-w-[70%] px-4 py-2 rounded-lg ${
+                    msg.from === currentUser
+                        ? 'bg-[#f60d9d] text-white rounded-br-none'
+                        : 'bg-white border border-gray-200 text-[#082245] rounded-bl-none'
+                }`}>
                   {msg.body}
                   {msg.fileUrl && (
-                      <div>
-                        <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
+                      <div className="mt-1">
+                        <a
+                            href={msg.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm underline hover:opacity-80"
+                        >
                           {msg.fileName}
                         </a>
                       </div>
                   )}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {formatTimestamp(msg.timestamp)}
+                  <div className={`text-xs mt-1 ${msg.from === currentUser ? 'text-white/80' : 'text-gray-500'}`}>
+                    {formatTimestamp(msg.timestamp)}
+                  </div>
                 </div>
               </div>
           ))}
           <div ref={messagesEndRef} />
         </div>
-        <form onSubmit={handleSend} className="bg-white p-4 border-t flex">
-          <button type="button" className="mr-2" onClick={() => fileInputRef.current.click()}>
-            <Paperclip className="w-6 h-6 text-gray-500" />
+        <form onSubmit={handleSend} className="bg-white p-4 border-t border-gray-200 flex items-center gap-2">
+          <button
+              type="button"
+              className="text-[#5f0099] hover:text-[#f60d9d] transition-colors"
+              onClick={() => fileInputRef.current.click()}
+          >
+            <Paperclip className="w-6 h-6" />
           </button>
           <input
               type="file"
@@ -106,17 +133,25 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message..."
-              className="flex-grow px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-grow px-4 py-2 bg-gray-50 text-[#082245] rounded-full border border-gray-200 focus:outline-none focus:border-[#f60d9d] focus:ring-1 focus:ring-[#f60d9d]"
           />
-          <button type="button" className="mx-2" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
-            <Smile className="w-6 h-6 text-gray-500" />
+          <button
+              type="button"
+              className="text-[#5f0099] hover:text-[#f60d9d] transition-colors"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <Smile className="w-6 h-6" />
           </button>
-          <button type="submit" className="bg-blue-500 text-white rounded-full p-2">
+          <button
+              type="submit"
+              className="bg-[#f60d9d] text-white rounded-full p-2 hover:bg-[#5f0099] transition-colors disabled:opacity-50"
+              disabled={!message.trim()}
+          >
             <Send className="w-5 h-5" />
           </button>
         </form>
         {showEmojiPicker && (
-            <div className="absolute bottom-16 right-4">
+            <div className="absolute bottom-20 right-4 shadow-xl">
               <EmojiPicker onEmojiClick={handleEmojiClick} />
             </div>
         )}

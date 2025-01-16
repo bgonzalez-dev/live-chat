@@ -5,7 +5,7 @@ import ChatWindow from './components/ChatWindow';
 import LoginForm from './components/LoginForm';
 import AddContactForm from './components/AddContactForm';
 import DirectChatForm from './components/DirectChatForm';
-import { setupXMPP, sendMessage, sendPresence } from './xmppClient';
+import { setupXMPP, sendMessage, sendPresence, requestPresence } from './xmppClient';
 
 function App() {
     const [activeChat, setActiveChat] = useState(null);
@@ -21,10 +21,11 @@ function App() {
         if (isLoggedIn) {
             const interval = setInterval(() => {
                 sendPresence();
-            }, 30000); // Send presence every 30 seconds
+                contacts.forEach(contact => requestPresence(contact.jid));
+            }, 5000);
             return () => clearInterval(interval);
         }
-    }, [isLoggedIn]);
+    }, [isLoggedIn, contacts]);
 
     const handleLogin = (username, password) => {
         setupXMPP(
@@ -44,6 +45,7 @@ function App() {
                     [pres.from]: {
                         show: pres.show,
                         status: pres.status,
+                        type: pres.type,
                         timestamp: new Date()
                     }
                 }));
@@ -51,6 +53,7 @@ function App() {
             (roster) => {
                 console.log('Received roster in App:', roster);
                 setContacts(roster);
+                roster.forEach(contact => requestPresence(contact.jid));
             }
         );
         setIsLoggedIn(true);
@@ -75,6 +78,7 @@ function App() {
         };
         setContacts(prevContacts => [...prevContacts, newContact]);
         setActiveChat(newContact);
+        requestPresence(jid);
     };
 
     const handleSendMessage = (to, body, file = null) => {
@@ -94,10 +98,10 @@ function App() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-white">
             {isLoggedIn ? (
                 <>
-                    <div className="w-1/4 bg-white border-r flex flex-col">
+                    <div className="w-[300px] bg-white border-r border-gray-200 flex flex-col">
                         <Header
                             onLogout={handleLogout}
                             onAddContact={() => setShowAddContact(true)}
@@ -109,7 +113,7 @@ function App() {
                             presence={presence}
                         />
                     </div>
-                    <div className="w-3/4">
+                    <div className="flex-1 bg-gray-50">
                         <ChatWindow
                             activeChat={activeChat}
                             messages={messages[activeChat?.jid] || []}
@@ -131,7 +135,7 @@ function App() {
                     )}
                 </>
             ) : (
-                <div className="w-full flex items-center justify-center">
+                <div className="w-full flex items-center justify-center bg-white">
                     <LoginForm onLogin={handleLogin} />
                 </div>
             )}

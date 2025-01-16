@@ -16,3 +16,14 @@ code {
     monospace;
 }
 
+@layer utilities {
+    .bg-gradient-brand {
+        background: linear-gradient(135deg, #5f0099, #082245);
+    }
+    .text-gradient-brand {
+        background: linear-gradient(135deg, #f60d9d, #5f0099);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+}
+
