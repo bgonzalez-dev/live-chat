@@ -91,6 +91,27 @@ export function setupXMPP(username, password, onMessage, onPresence, onRoster) {
   xmpp.start().catch(console.error);
 }
 
+export function logout() {
+  if (xmpp) {
+    // Send unavailable presence
+    xmpp.send(xml('presence', { type: 'unavailable' }));
+
+    // Stop the XMPP client
+    xmpp.stop().then(() => {
+      console.log('XMPP client stopped');
+    }).catch(console.error);
+
+    // Clear callbacks
+    onMessageCallback = null;
+    onPresenceCallback = null;
+    onRosterCallback = null;
+
+    xmpp = null;
+  } else {
+    console.error('XMPP client not initialized');
+  }
+}
+
 export function sendMessage(to, body, file = null) {
   if (xmpp) {
     const message = xml(

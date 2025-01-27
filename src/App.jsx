@@ -5,7 +5,7 @@ import ChatWindow from './components/ChatWindow';
 import LoginForm from './components/LoginForm';
 import AddContactForm from './components/AddContactForm';
 import DirectChatForm from './components/DirectChatForm';
-import { setupXMPP, sendMessage, sendPresence, requestPresence } from './xmppClient';
+import {setupXMPP, sendMessage, sendPresence, requestPresence, logout} from './xmppClient';
 
 function App() {
     const [activeChat, setActiveChat] = useState(null);
@@ -61,7 +61,7 @@ function App() {
     };
 
     const handleLogout = () => {
-        sendPresence('unavailable', 'Offline');
+        logout();
         setIsLoggedIn(false);
         setActiveChat(null);
         setMessages({});

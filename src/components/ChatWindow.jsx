@@ -78,7 +78,7 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
   }
 
   return (
-      <div className="flex flex-col h-full bg-gray-50">
+      <div className="flex flex-col h-full bg-gray-100" style={{ backgroundImage: 'url(/bg.svg)', backgroundRepeat: 'no-repeat', backgroundSize: 'cover' }}>
         <div className="bg-white p-4 border-b border-gray-200 flex items-center">
           <h2 className="text-xl font-semibold text-[#082245] flex-grow">{activeChat.name}</h2>
           <div className="text-sm text-[#5f0099]">
@@ -88,7 +88,7 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
         <div className="flex-grow overflow-y-auto p-4">
           {messages.map((msg, index) => (
               <div key={index} className={`mb-4 ${msg.from === currentUser ? 'text-right' : 'text-left'}`}>
-                <div className={`inline-block max-w-[70%] px-4 py-2 rounded-lg ${
+                <div className={`inline-block max-w-[70%] px-4 py-2 rounded-2xl shadow-2xl ${
                     msg.from === currentUser
                         ? 'bg-[#f60d9d] text-white rounded-br-none'
                         : 'bg-white border border-gray-200 text-[#082245] rounded-bl-none'
