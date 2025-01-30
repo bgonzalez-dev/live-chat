@@ -1,7 +1,7 @@
-import React from 'react';
-import { MessageSquare, UserPlus, LogOut, MessageSquarePlus } from 'lucide-react';
+import React from "react"
+import { MessageSquare, UserPlus, LogOut, MessageSquarePlus, Users } from "lucide-react"
 
-function Header({ onLogout, onAddContact, onStartDirectChat }) {
+function Header({ onLogout, onAddContact, onStartDirectChat, onToggleContacts }) {
     return (
         <header className="flex justify-between items-center p-4 bg-white border-b border-gray-200">
             <div className="flex items-center">
@@ -10,18 +10,11 @@ function Header({ onLogout, onAddContact, onStartDirectChat }) {
             </div>
             <div className="flex items-center space-x-2">
                 <button
-                    onClick={onStartDirectChat}
+                    onClick={onToggleContacts}
                     className="p-2 rounded-full hover:bg-gray-100 text-[#5f0099] transition-colors"
-                    title="Start Direct Chat"
+                    title="Toggle Contacts"
                 >
-                    <MessageSquarePlus className="w-6 h-6" />
-                </button>
-                <button
-                    onClick={onAddContact}
-                    className="p-2 rounded-full hover:bg-gray-100 text-[#5f0099] transition-colors"
-                    title="Add Contact"
-                >
-                    <UserPlus className="w-6 h-6" />
+                    <Users className="w-6 h-6" />
                 </button>
                 <button
                     onClick={onLogout}
@@ -32,8 +25,8 @@ function Header({ onLogout, onAddContact, onStartDirectChat }) {
                 </button>
             </div>
         </header>
-    );
+    )
 }
 
-export default Header;
+export default Header
 

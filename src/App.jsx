@@ -1,101 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import ChatList from './components/ChatList';
-import ChatWindow from './components/ChatWindow';
-import LoginForm from './components/LoginForm';
-import AddContactForm from './components/AddContactForm';
-import DirectChatForm from './components/DirectChatForm';
-import {setupXMPP, sendMessage, sendPresence, requestPresence, logout} from './xmppClient';
+import React, { useState, useEffect } from "react"
+import Header from "./components/Header"
+import ChatList from "./components/ChatList"
+import ChatWindow from "./components/ChatWindow"
+import Contacts from "./components/Contacts"
+import LoginForm from "./components/LoginForm"
+import AddContactForm from "./components/AddContactForm"
+import DirectChatForm from "./components/DirectChatForm"
+import { setupXMPP, sendMessage, sendPresence, requestPresence, removeContact, logout } from "./xmppClient"
 
 function App() {
-    const [activeChat, setActiveChat] = useState(null);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [messages, setMessages] = useState({});
-    const [contacts, setContacts] = useState([]);
-    const [presence, setPresence] = useState({});
-    const [showAddContact, setShowAddContact] = useState(false);
-    const [showDirectChat, setShowDirectChat] = useState(false);
-    const [currentUser, setCurrentUser] = useState(null);
+    const [activeChat, setActiveChat] = useState(null)
+    const [isLoggedIn, setIsLoggedIn] = useState(false)
+    const [messages, setMessages] = useState({})
+    const [contacts, setContacts] = useState([])
+    const [presence, setPresence] = useState({})
+    const [showAddContact, setShowAddContact] = useState(false)
+    const [showDirectChat, setShowDirectChat] = useState(false)
+    const [currentUser, setCurrentUser] = useState(null)
+    const [showContacts, setShowContacts] = useState(false)
 
     useEffect(() => {
         if (isLoggedIn) {
             const interval = setInterval(() => {
-                sendPresence();
-                contacts.forEach(contact => requestPresence(contact.jid));
-            }, 5000);
-            return () => clearInterval(interval);
+                sendPresence()
+                contacts.forEach((contact) => requestPresence(contact.jid))
+            }, 30000)
+            return () => clearInterval(interval)
         }
-    }, [isLoggedIn, contacts]);
+    }, [isLoggedIn, contacts])
 
     const handleLogin = (username, password) => {
         setupXMPP(
             username,
             password,
             (msg) => {
-                console.log('Received message in App:', msg);
-                setMessages(prevMessages => ({
+                setMessages((prevMessages) => ({
                     ...prevMessages,
-                    [msg.from]: [...(prevMessages[msg.from] || []), msg]
-                }));
+                    [msg.from]: [...(prevMessages[msg.from] || []), msg],
+                }))
             },
             (pres) => {
-                console.log('Received presence in App:', pres);
-                setPresence(prevPresence => ({
+                setPresence((prevPresence) => ({
                     ...prevPresence,
                     [pres.from]: {
                         show: pres.show,
                         status: pres.status,
                         type: pres.type,
-                        timestamp: new Date()
-                    }
-                }));
+                        timestamp: new Date(),
+                    },
+                }))
             },
             (roster) => {
-                console.log('Received roster in App:', roster);
-                setContacts(roster);
-                roster.forEach(contact => requestPresence(contact.jid));
-            }
-        );
-        setIsLoggedIn(true);
-        setCurrentUser(username);
-    };
+                setContacts(roster)
+                roster.forEach((contact) => requestPresence(contact.jid))
+            },
+        )
+        setIsLoggedIn(true)
+        setCurrentUser(username)
+    }
 
     const handleLogout = () => {
-        logout();
-        setIsLoggedIn(false);
-        setActiveChat(null);
-        setMessages({});
-        setContacts([]);
-        setPresence({});
-        setCurrentUser(null);
-    };
+        sendPresence("unavailable", "Offline")
+        setIsLoggedIn(false)
+        setActiveChat(null)
+        setMessages({})
+        setContacts([])
+        setPresence({})
+        setCurrentUser(null)
+        logout()
+    }
 
     const handleStartDirectChat = (jid) => {
         const newContact = {
-            jid,
-            name: jid.split('@')[0],
-            subscription: 'none'
-        };
-        setContacts(prevContacts => [...prevContacts, newContact]);
-        setActiveChat(newContact);
-        requestPresence(jid);
-    };
+            jid: typeof jid === "string" ? jid : jid.jid,
+            name: typeof jid === "string" ? jid.split("@")[0] : jid.name,
+            subscription: "none",
+        }
+        setContacts((prevContacts) => {
+            if (!prevContacts.find((c) => c.jid === newContact.jid)) {
+                return [...prevContacts, newContact]
+            }
+            return prevContacts
+        })
+        setActiveChat(newContact)
+        setShowContacts(false)
+        requestPresence(newContact.jid)
+    }
+
+    const handleRemoveContact = (jid) => {
+        removeContact(jid)
+        setContacts((prevContacts) => prevContacts.filter((c) => c.jid !== jid))
+        if (activeChat?.jid === jid) {
+            setActiveChat(null)
+        }
+    }
 
     const handleSendMessage = (to, body, file = null) => {
-        sendMessage(to, body, file);
+        sendMessage(to, body, file)
         const newMessage = {
             from: currentUser,
             to,
             body,
             timestamp: new Date().toISOString(),
             fileUrl: file?.url,
-            fileName: file?.name
-        };
-        setMessages(prevMessages => ({
+            fileName: file?.name,
+        }
+        setMessages((prevMessages) => ({
             ...prevMessages,
-            [to]: [...(prevMessages[to] || []), newMessage]
-        }));
-    };
+            [to]: [...(prevMessages[to] || []), newMessage],
+        }))
+    }
 
     return (
         <div className="flex h-screen bg-white">
@@ -106,12 +120,18 @@ function App() {
                             onLogout={handleLogout}
                             onAddContact={() => setShowAddContact(true)}
                             onStartDirectChat={() => setShowDirectChat(true)}
+                            onToggleContacts={() => setShowContacts(!showContacts)}
                         />
-                        <ChatList
-                            setActiveChat={setActiveChat}
-                            contacts={contacts}
-                            presence={presence}
-                        />
+                        {showContacts ? (
+                            <Contacts
+                                contacts={contacts}
+                                presence={presence}
+                                onRemoveContact={handleRemoveContact}
+                                onStartChat={handleStartDirectChat}
+                            />
+                        ) : (
+                            <ChatList setActiveChat={setActiveChat} contacts={contacts} presence={presence} />
+                        )}
                     </div>
                     <div className="flex-1 bg-gray-50">
                         <ChatWindow
@@ -122,16 +142,9 @@ function App() {
                             currentUser={currentUser}
                         />
                     </div>
-                    {showAddContact && (
-                        <AddContactForm
-                            onClose={() => setShowAddContact(false)}
-                        />
-                    )}
+                    {showAddContact && <AddContactForm onClose={() => setShowAddContact(false)} />}
                     {showDirectChat && (
-                        <DirectChatForm
-                            onStartChat={handleStartDirectChat}
-                            onClose={() => setShowDirectChat(false)}
-                        />
+                        <DirectChatForm onStartChat={handleStartDirectChat} onClose={() => setShowDirectChat(false)} />
                     )}
                 </>
             ) : (
@@ -140,8 +153,8 @@ function App() {
                 </div>
             )}
         </div>
-    );
+    )
 }
 
-export default App;
+export default App
 

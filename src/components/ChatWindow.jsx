@@ -115,13 +115,6 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
           <div ref={messagesEndRef} />
         </div>
         <form onSubmit={handleSend} className="bg-white p-4 border-t border-gray-200 flex items-center gap-2">
-          <button
-              type="button"
-              className="text-[#5f0099] hover:text-[#f60d9d] transition-colors"
-              onClick={() => fileInputRef.current.click()}
-          >
-            <Paperclip className="w-6 h-6" />
-          </button>
           <input
               type="file"
               ref={fileInputRef}
@@ -144,7 +137,7 @@ function ChatWindow({ activeChat, messages, presence, onSendMessage, currentUser
           </button>
           <button
               type="submit"
-              className="bg-[#f60d9d] text-white rounded-full p-2 hover:bg-[#5f0099] transition-colors disabled:opacity-50"
+              className="bg-[#f60d9d] text-white rounded-full p-2 hover:bg-[#5f0099] transition-colors"
               disabled={!message.trim()}
           >
             <Send className="w-5 h-5" />
