@@ -19,6 +19,7 @@ function App() {
     const [currentUser, setCurrentUser] = useState(null)
     const [showContacts, setShowContacts] = useState(false)
 
+
     useEffect(() => {
         if (isLoggedIn) {
             const interval = setInterval(() => {
@@ -29,6 +30,14 @@ function App() {
         }
     }, [isLoggedIn, contacts])
 
+    useEffect(() => {
+        const storedMessages = JSON.parse(localStorage.getItem(`chat_${currentUser}`));
+        if (storedMessages) {
+            setMessages(storedMessages);
+        }
+    }, [currentUser]);
+
+
     const handleLogin = (username, password) => {
         setupXMPP(
             username,
@@ -37,7 +46,7 @@ function App() {
                 setMessages((prevMessages) => ({
                     ...prevMessages,
                     [msg.from]: [...(prevMessages[msg.from] || []), msg],
-                }))
+                }));
             },
             (pres) => {
                 setPresence((prevPresence) => ({
@@ -48,16 +57,22 @@ function App() {
                         type: pres.type,
                         timestamp: new Date(),
                     },
-                }))
+                }));
             },
             (roster) => {
-                setContacts(roster)
-                roster.forEach((contact) => requestPresence(contact.jid))
-            },
-        )
-        setIsLoggedIn(true)
-        setCurrentUser(username)
-    }
+                setContacts(roster);
+                roster.forEach((contact) => requestPresence(contact.jid));
+            }
+        );
+
+        setIsLoggedIn(true);
+        setCurrentUser(username);
+
+        // Store session state in sessionStorage
+        sessionStorage.setItem("isLoggedIn", "true");
+        sessionStorage.setItem("currentUser", username);
+    };
+
 
     const handleLogout = () => {
         sendPresence("unavailable", "Offline")
@@ -96,19 +111,30 @@ function App() {
     }
 
     const handleSendMessage = (to, body, file = null) => {
-        sendMessage(to, body, file)
         const newMessage = {
-            from: currentUser,
+            from: currentUser,  // This ensures we know the sender
             to,
             body,
             timestamp: new Date().toISOString(),
-            fileUrl: file?.url,
-            fileName: file?.name,
-        }
-        setMessages((prevMessages) => ({
-            ...prevMessages,
-            [to]: [...(prevMessages[to] || []), newMessage],
-        }))
+            fileUrl: file?.url || null,
+            fileName: file?.name || null,
+        };
+
+        // Update messages state immediately
+        setMessages((prevMessages) => {
+            const updatedMessages = {
+                ...prevMessages,
+                [to]: [...(prevMessages[to] || []), newMessage],
+            };
+
+            // Save updated messages to localStorage
+            localStorage.setItem(`chat_${currentUser}`, JSON.stringify(updatedMessages));
+
+            return updatedMessages;
+        });
+
+        // Send the message to the XMPP server
+        sendMessage(to, body, file);
     }
 
     return (
